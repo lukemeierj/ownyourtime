@@ -1,0 +1,375 @@
+alltext.txt
+background.js
+var currentBlocked = new Array();
+var tempAllow = new Object();
+
+chrome.storage.sync.get('blocked', function(details){
+	currentBlocked = details['blocked'];
+});
+
+chrome.storage.onChanged.addListener(function(details){
+	chrome.storage.sync.get('blocked', function(details){
+		currentBlocked = details['blocked'];
+	});
+});
+
+function endPermission(domain, wait){
+	setTimeout(function(){ 
+		tempAllow[domain] = false;
+	}, wait);
+}
+
+chrome.webRequest.onHeadersReceived.addListener(
+	function(details) {
+		var uri = new URI(details.url),
+			workingDomain = uri.subdomain() + '.' + uri.domain();
+
+		if(tempAllow[workingDomain]){
+			return {cancel: false}
+		}
+		else{
+            index = currentBlocked.indexOf(workingDomain);
+            if(index > -1){
+                delete tempAllow[workingDomain];
+                var url = chrome.runtime.getURL("catcher.html") + "?next=" + details.url;
+                return {redirectUrl: url};
+            }
+            else{
+                return {cancel: false};
+            }
+			
+		}
+},
+    {urls: ["<all_urls>"], 
+	types: ['main_frame']}, 
+	["blocking"]);
+
+chrome.runtime.onMessage.addListener(function(request, sender) {
+	if(request.redirect){
+		var uri = new URI(request.redirect),
+            workingDomain = uri.subdomain() + '.' + uri.domain();
+		tempAllow[workingDomain] = true;
+		endPermission(workingDomain, 10000);
+		chrome.tabs.update(sender.tab.id, {url: request.redirect});
+	}
+	if(request.storageUpdate){
+		chrome.storage.sync.get('blocked', function(details){
+            var websites = details['blocked'],
+                uri = new URI(request.storageUpdate),
+                workingDomain = uri.subdomain() + '.' + uri.domain();
+
+                index = websites.indexOf(workingDomain);
+            if(index == -1){
+                websites.push(workingDomain);  
+            }
+			chrome.storage.sync.set({'blocked': websites}, function(){
+				console.log('Blocked sites stored.');
+			})
+		});
+	}
+    if(request.removeStorage){
+        chrome.storage.sync.get('blocked', function(details){
+            var websites = details['blocked'],
+                index = websites.indexOf(request.removeStorage);
+            if (index > -1) {
+                websites.splice(index, 1);
+            }
+			console.log('websites from bg', websites)
+			chrome.storage.sync.set({'blocked': websites}, function(){
+				console.log('all set!');
+			})
+		});
+        
+    }
+
+});
+
+// chrome.storage.onChanged.addListener(function(details){
+// 	chrome.storage.sync.get('blocked', function(details){
+// 		var websites = details['blocked'];
+// 		chrome.runtime.sendMessage({newStorage: $('#url-field').val()})
+		
+// 		setURLs(websites);
+
+// 	});
+// });catcher.html
+<head>
+    <title>Break This Habit</title>
+    <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet">
+    <style>
+        #explain {
+            font-size: 1.5em;
+            font-family: 'Nunito', sans-serif;
+            color: rgba(0, 0, 0, .6);
+            width: 90vw;
+            margin: 5vw;
+            height: 40px;
+            margin-top: 45vh;
+            text-align: center;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, .3);
+            border: none;
+            letter-spacing: 2px;
+        }
+        ::-webkit-input-placeholder { /* Chrome/Opera/Safari */
+          color: rgba(0, 0, 0, .4);
+        }
+        ::-moz-placeholder { /* Firefox 19+ */
+          color: rgba(0, 0, 0, .4);
+        }
+        :-ms-input-placeholder { /* IE 10+ */
+          color: rgba(0, 0, 0, .4);
+        }
+        :-moz-placeholder { /* Firefox 18- */
+          color: rgba(0, 0, 0, .4);
+        }
+        body {
+/*            background-image: url(http://www.designbolts.com/wp-content/uploads/2014/03/Blue-Blur-Background1.jpg);*/
+/*            https://static.pexels.com/photos/1227/night-dark-blur-blurred.jpg, http://www.msfn.org/board/uploads/post-110805-12734098127.jpg*/
+            overflow: hidden;
+            background-image: url("./background.jpg");
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
+            background-size: cover;
+        }
+    
+    </style>
+</head>
+<body>
+
+    <script src="jquery.js"></script>
+    <script src="URI.js"></script>
+
+    <input id = "explain" type="text" placeholder="enter your explanation here">
+<!--    <button id = "go">Home</button>-->
+    <script src="catcher.js"></script>
+</body>catcher.js
+var wordlen = 15;
+
+$('#explain').bind("paste",function(e) {
+	e.preventDefault();
+});
+$('#explain').focus();  
+$(document).on('keyup', function(e){
+	if(e.which == 13){
+		var url = window.location.href;
+		uri = new URI(url);
+		queryObj = URI.parseQuery(uri.query());
+		var words = $("#explain").val(),
+			wordList = words.split(/\s+/),
+			short = true;
+		for(var i = 0; i < wordList.length; i++){
+			if(wordList[i].length > words.length*.7){
+				short = false;
+				break;
+			}
+		}
+		if(words.length >= wordlen && short){
+			chrome.runtime.sendMessage({redirect: queryObj['next']});
+
+		} 
+	}
+
+})manifest.json
+{
+	"manifest_version": 2,
+
+	"name": "Break This Habit",
+	"description": "Stop losing hours of your life getting distracted on websites you don't even really want to visit.  Get your life back.  Let us help you break this habit.",
+	"version": "1",
+
+	"browser_action": {
+		"default_icon": "icon.png",
+		"default_title": "Manage blacklist",
+		"default_popup": "popup.html"
+	},
+	"background": {
+		"scripts": ["background.js", "jquery.js", "URI.js"]
+			},
+	"options_page": "options.html",
+	"permissions": [
+		"webRequest",
+			"webRequestBlocking",
+			"<all_urls>",
+			"tabs",
+			"storage"
+	],
+
+	"web_accessible_resources": [
+		"catcher.html"
+	]
+}
+popup.html
+<!doctype html>
+<!--
+ This page is shown when the extension button is clicked, because the
+ "browser_action" field in manifest.json contains the "default_popup" key with
+ value "popup.html".
+ -->
+<html>
+  <head>
+    <title>Popup</title>
+    <style>
+        body {
+            font-family: "Segoe UI", "Lucida Grande", Tahoma, sans-serif;
+            font-size: 1em;
+            color: #dbe4e8;
+            width: 200px;
+            max-height: 250px;
+            margin: -1px;
+            background-color: #324446;
+
+        }
+        div {
+            padding: 5px;
+        }
+        #new {
+            cursor: pointer;
+            padding-top: 20px;
+            height: 2em;
+/*            background-color: #deadaf*/
+        }
+        #blocking{
+            min-height: 7em;
+/*            background-color: #dabeef*/
+        }
+        li {
+            font-size: .8em;
+            list-style-type: none;
+        }
+        #credit{
+            margin-left: 30px;
+            padding-bottom: 5px;
+            font-size: .8em;
+            color: #698F92;
+        }
+        p, button {
+            display: inline-block;
+        }
+        .delete{
+            color: #698F92;
+            cursor: pointer;
+            padding-right: 5px;
+        }
+        #url-list {
+            margin-left: -20px;
+        }
+        #add{
+            margin-left: 30px;
+        }
+        #blacklist_title{
+            margin-left: 30px;
+        }
+        #credit{
+            
+        }
+        a {
+            color: #698F92;
+        }
+    </style>
+   
+
+  </head>
+    <body>
+        <div id = 'new'><span id = "add">Add current site</span></div>
+        <div id='blocking'>
+            <span id = 'blacklist_title'>Blacklist</span>
+            <ul id = "url-list">
+                <li class="url"><span class="delete">x</span><span>www.facebook.com</span></li>
+            </ul>
+            
+        </div>
+        <span id = "credit">created by <a target = "_blank" href='http://lukemeierj.wordpress.com' rel="noopener noreferrer">luke meier</a></span>
+    </body>
+    <script src="jquery.js"></script>
+    <script src="URI.js"></script>
+    <script src="popup.js"></script>
+</html>
+
+popup.js
+chrome.storage.sync.get('blocked', function(details){
+	console.log(details);
+	var websites = details['blocked'];
+	if(!websites){
+		chrome.storage.sync.set({'blocked': []}, function(){
+			websites = [];
+		})
+	}
+	setURLs(websites);
+});
+
+
+chrome.storage.onChanged.addListener(function(details){
+	chrome.storage.sync.get('blocked', function(details){
+		var websites = details['blocked'];
+		setURLs(websites);
+
+	});
+});
+
+function setURLs(arr){
+	list = $("#url-list");
+	list.empty();
+	arr.forEach(function(current, index, arr){
+		list.append($('<li class = "url">')
+                .append($('<span class = "delete">')
+                    .text('x'))
+                .append($('<span>')
+                        .text(current)));
+			
+	})
+    $('.delete').on('click', function(e){
+        console.log('clicked');
+        var $this = $(this);
+        chrome.tabs.query({
+        "active": true,
+        "currentWindow": true,
+        "status": "complete",
+        "windowType": "normal"}, function (tabs) {
+            var currentDomain;
+            for (i in tabs) {
+                     currentDomain = tabs[i].url;
+            }
+            var rawDomain = $this.siblings('span').text(),
+                storedDomain = URI(rawDomain),
+                currentDomain = URI(currentDomain);
+
+            var current = currentDomain.subdomain() + "." + currentDomain.domain(),
+                stored = storedDomain.path();
+            if(current == stored){
+                chrome.runtime.sendMessage({removeStorage: stored});
+            }
+            else{
+                $this.nextAll().remove()
+                $this.after($('<span class = "warning">').text("Go to this domain before allowing it"));
+            }
+
+
+        });
+        
+})
+}
+
+$('#add').on('click', function(e){
+    chrome.tabs.query({
+        "active": true,
+        "currentWindow": true,
+        "status": "complete",
+        "windowType": "normal"}, function (tabs) {
+            for (i in tabs) {
+                    chrome.runtime.sendMessage({storageUpdate: tabs[i].url});
+        }
+    });
+});text.py
+import os
+with open("alltext.txt", 'w') as out: 
+    for filename in os.listdir('./'):
+        if filename != "URI.js" and 'jquery' not in filename and not filename.endswith('jpg') and not filename.endswith('png'): 
+            print(filename)
+            out.write(filename)
+            out.write('\n')
+            with open(filename, 'r') as reader:
+                out.write(reader.read())
+        else:
+            continue

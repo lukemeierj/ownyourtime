@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Break This Habit</title>
+    <style>
+        body {
+            font-family: "Segoe UI", "Lucida Grande", Tahoma, sans-serif;
+            font-size: 1em;
+            color: #dbe4e8;
+            width: 194px;
+            margin: -1px;
+            background-color: #324446;
+        }
+        #content {
+            margin-left: 40px;
+        }
+        #new {
+            padding-top: 30px;
+            padding-bottom: 25px;
+        }
+        #blocking{
+            min-height: 7em;
+        }
+        li {
+            font-size: .8em;
+            list-style-type: none;
+        }
+        p, button {
+            display: inline-block;
+        }
+        .delete{
+            color: #698F92;
+            cursor: pointer;
+            padding-right: 5px;
+        }
+        #url-list {
+            margin: 0px;
+            margin-left: -10px;
+            padding: 0;
+        }
+        #add{
+            user-select: none;
+            cursor: pointer;
+            margin-left: -12px;
+            background-color: #4e6d71;
+            padding: 12px;
+            border-radius: 2px;
+        }
+        #add:hover{
+            background-color: #456064;
+/*            color: #c9d3d8;*/
+        }
+        #credit{
+            margin-left: 35px;
+            padding-bottom: 10px;
+            font-size: .8em;
+            color: #698F92;
+        }
+        a {
+            color: #698F92;
+        }
+    </style>
+   
+
+  </head>
+    <body>
+        <div id = 'content'>
+            <div id = 'new'><span id = "add">Add current site</span></div>
+            <div id='blocking'>
+                <span id = 'blacklist-title'>Blacklist</span>
+                <ul id = "url-list">
+                    <li class="url"><span class="delete">x</span><span>www.facebook.com</span></li>
+                </ul>
+
+            </div>
+         </div>
+        <span id = "credit">created by <a target = "_blank" href='http://lukemeierj.wordpress.com' rel="noopener noreferrer">luke meier</a></span>
+    </body>
+    <script src="jquery.js"></script>
+    <script src="URI.js"></script>
+    <script src="popup.js"></script>
+</html>
+

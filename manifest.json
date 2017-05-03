@@ -1,0 +1,27 @@
+{
+	"manifest_version": 2,
+
+	"name": "Break This Habit",
+	"description": "Stop losing hours of your life getting distracted on websites you don't even really want to visit.  Get your life back.  Let us help you break this habit.",
+	"version": "1",
+
+	"browser_action": {
+		"default_icon": "icon.png",
+		"default_title": "Manage blacklist",
+		"default_popup": "popup.html"
+	},
+	"background": {
+		"scripts": ["background.js", "jquery.js", "URI.js"]
+			},
+	"permissions": [
+		"webRequest",
+			"webRequestBlocking",
+			"<all_urls>",
+			"tabs",
+			"storage"
+	],
+
+	"web_accessible_resources": [
+		"catcher.html"
+	]
+}
