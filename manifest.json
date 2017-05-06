@@ -1,13 +1,13 @@
 {
 	"manifest_version": 2,
 
-	"name": "Break This Habit",
-	"description": "Stop losing hours of your life getting distracted on websites you don't even really want to visit.  Get your life back.  Let us help you break this habit.",
-	"version": "1",
+	"name": "Own Your Time",
+	"description": "Online companies spends millions to keep you distracted.  Block sites, remember why you visit, and don't give up your autonomy.",
+	"version": "1.0.1",
 
 	"browser_action": {
 		"default_icon": "icon.png",
-		"default_title": "Manage blacklist",
+		"default_title": "Own Your Time",
 		"default_popup": "popup.html"
 	},
 	"background": {
